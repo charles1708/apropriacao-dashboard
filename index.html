@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apropriação de Horas · Taboca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{
+  --verde:#046B46; --verde2:#00905C; --verde-claro:#F2F7F4; --verde-borda:#DDE7E1; --verde-suave:#8CC9A8;
+  --texto:#262626; --cinza:#595959; --linha:#E6ECE8; --vermelho:#A30000; --vermelho2:#C00000; --laranja:#E07B00;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#FFFFFF;color:var(--texto);font-family:'Barlow',system-ui,sans-serif;font-size:14px}
+a{color:var(--verde)}
+button,select,input{font-family:inherit;font-size:13px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 24px;border-bottom:2px solid var(--verde2);flex-wrap:wrap}
+.titulo{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--verde);letter-spacing:.3px;line-height:1.1}
+.sub{font-size:12px;color:var(--cinza)}
+.logo{height:20px}
+nav.abas{display:flex;gap:6px;flex-wrap:wrap}
+nav.abas button{border:0;cursor:pointer;font-weight:600;padding:8px 12px;border-radius:4px;background:var(--verde-claro);color:var(--verde);min-height:36px}
+nav.abas button[aria-selected="true"]{background:var(--verde);color:#fff}
+.layout{display:flex;flex-wrap:wrap;min-height:calc(100vh - 90px)}
+aside{flex:0 0 190px;background:var(--verde-claro);padding:16px;display:flex;flex-direction:column;gap:14px}
+aside label.rot{display:block;font-weight:700;color:var(--verde);font-size:11px;letter-spacing:.6px;margin-bottom:4px}
+aside select{width:100%;padding:6px;border:1px solid #A9CDB9;border-radius:4px;background:#fff}
+aside .nota{margin-top:auto;font-size:11px;color:var(--cinza);line-height:1.45}
+main{flex:999 1 640px;min-width:0;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--verde-claro);border-top:3px solid var(--verde2);border-radius:4px;padding:8px 12px}
+.kpi.ruim{border-top-color:var(--vermelho2)} .kpi.atencao{border-top-color:var(--laranja)}
+.kpi .r{font-size:11px;font-weight:600;color:var(--cinza);text-transform:uppercase}
+.kpi .v{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:700;line-height:1.05}
+.kpi.ruim .v{color:var(--vermelho)}
+.kpi .d{font-size:11px;color:var(--cinza)}
+.grade{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.card{border:1px solid var(--verde-borda);border-radius:4px;padding:12px 14px;min-width:0}
+.card h2{margin:0 0 8px;font-size:15px;color:var(--verde)}
+.card .rodape{font-size:11px;color:var(--cinza);margin-top:6px}
+.graf{position:relative;height:260px}
+.destaques{background:var(--verde-claro);border-radius:4px;padding:12px 16px;line-height:1.5}
+.destaques h2{margin:0 0 6px;font-size:15px;color:var(--verde)}
+.tabela{width:100%;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--verde);color:#fff;text-align:left;padding:6px 8px;font-weight:600;white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid #EEF3F0}
+td.n{text-align:right} .barra{height:8px;background:#F3E3E3;border-radius:2px;min-width:60px}
+.barra>div{height:100%;background:var(--vermelho2);border-radius:2px}
+.barra.boa{background:#E3F1E9}.barra.boa>div{background:var(--verde2)}
+.seg{display:flex;gap:6px;margin-bottom:8px}
+.seg button{border:1px solid #A9CDB9;background:#fff;color:var(--verde);border-radius:4px;padding:5px 10px;cursor:pointer;font-weight:600;min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--verde);color:#fff;border-color:var(--verde)}
+.heat{display:grid;gap:2px;font-size:11px;align-items:center}
+.heat .c{height:16px;border-radius:2px}
+.legenda{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--cinza);margin-top:6px}
+.legenda span{display:flex;gap:4px;align-items:center}.legenda i{width:12px;height:12px;display:inline-block;border-radius:2px}
+.oculto{display:none!important}
+footer{height:8px;background:url('faixa-taboca.png') center/100% 100% no-repeat}
+#login{max-width:360px;margin:12vh auto;padding:28px;border:1px solid var(--verde-borda);border-radius:6px;display:flex;flex-direction:column;gap:12px}
+#login input{padding:9px;border:1px solid #A9CDB9;border-radius:4px}
+#login button{padding:10px;border:0;border-radius:4px;background:var(--verde);color:#fff;font-weight:700;cursor:pointer}
+.erro{color:var(--vermelho);font-size:12px}
+.carregando{color:var(--cinza);font-size:13px;padding:30px;text-align:center}
+.status{font-size:11px;color:var(--cinza)}
+@media (max-width:700px){aside{flex:1 1 100%}.titulo{font-size:22px}.graf{height:220px}}
+</style>
+</head>
+<body>
+
+<section id="login" class="oculto" aria-label="Entrar">
+  <img src="logo-taboca.png" alt="Taboca" style="height:22px;align-self:flex-start">
+  <div class="titulo" style="font-size:22px">Apropriação de Horas</div>
+  <label for="email">E-mail</label>
+  <input id="email" type="email" autocomplete="username">
+  <label for="senha">Senha</label>
+  <input id="senha" type="password" autocomplete="current-password">
+  <button id="entrar" type="button">Entrar</button>
+  <div id="erroLogin" class="erro" role="alert"></div>
+</section>
+
+<div id="app" class="oculto">
+<header>
+  <div>
+    <div class="titulo" id="tituloPagina">APROPRIAÇÃO DE HORAS · VISÃO GERAL</div>
+    <div class="sub">Apropriação de Horas · Oficina de Frota e Industrial · IW47 · <span id="ultimaSync">carregando…</span></div>
+  </div>
+  <nav class="abas" role="tablist" aria-label="Páginas">
+    <button role="tab" data-pag="geral" aria-selected="true">Visão geral</button>
+    <button role="tab" data-pag="pessoas" aria-selected="false">Pessoas</button>
+    <button role="tab" data-pag="equip" aria-selected="false">Equipamentos</button>
+    <button role="tab" data-pag="ordens" aria-selected="false">Ordens</button>
+    <button role="tab" data-pag="qualidade" aria-selected="false">Qualidade</button>
+  </nav>
+  <div style="display:flex;align-items:center;gap:12px">
+    <img class="logo" src="logo-taboca.png" alt="Taboca">
+    <button id="sair" type="button" class="seg" style="border:1px solid #A9CDB9;background:#fff;color:#046B46;border-radius:4px;padding:5px 10px;cursor:pointer">Sair</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside aria-label="Filtros">
+  <div><label class="rot" for="fAno">ANO</label><select id="fAno"></select></div>
+  <div><label class="rot" for="fMes">MÊS</label><select id="fMes"></select></div>
+  <div><label class="rot" for="fArea">ÁREA</label><select id="fArea"></select></div>
+  <div class="nota">Referência de apropriação: <b id="refTxt">78%</b> das horas da escala (8,04 h de 10,25 h).<br><br>Os dados se atualizam sozinhos quando um Excel novo é enviado ao repositório de dados no GitHub.</div>
+</aside>
+
+<main id="conteudo">
+<div class="carregando" id="carregando">Carregando dados…</div>
+
+<!-- ============ VISÃO GERAL ============ -->
+<section data-pag="geral" class="pag oculto">
+  <div class="kpis" id="kGeral"></div>
+  <div class="grade">
+    <div class="card"><h2 id="tMensal">Horas apontadas por mês</h2><div class="graf"><canvas id="gMensal" role="img" aria-label="Horas por mês"></canvas></div></div>
+    <div class="card"><h2>Apropriação por área · % das horas da escala</h2><div class="graf"><canvas id="gArea" role="img" aria-label="Apropriação por área"></canvas></div><div class="rodape">Linha tracejada = referência. Considera só técnicos que apontaram no período.</div></div>
+  </div>
+  <div class="grade">
+    <div class="card"><h2>Horas por família de equipamento</h2><div class="graf"><canvas id="gFamilia" role="img" aria-label="Horas por família"></canvas></div></div>
+    <div class="destaques" id="destaques"></div>
+  </div>
+</section>
+
+<!-- ============ PESSOAS ============ -->
+<section data-pag="pessoas" class="pag oculto">
+  <div class="kpis" id="kPessoas"></div>
+  <div class="grade">
+    <div class="card">
+      <h2>Ranking de apropriação</h2>
+      <div class="seg" role="group" aria-label="Ordem do ranking">
+        <button type="button" id="bPiores" aria-pressed="true">Menor apropriação</button>
+        <button type="button" id="bMelhores" aria-pressed="false">Maior apropriação</button>
+      </div>
+      <div class="tabela"><table id="tRanking"></table></div>
+      <div class="rodape">Férias e afastamentos ainda não são descontados: confirme antes de cobrar individualmente.</div>
+    </div>
+    <div class="card">
+      <h2 id="tHeat">Mapa de apontamento diário</h2>
+      <div id="heat"></div>
+      <div class="legenda">
+        <span><i style="background:#EDEDED"></i>sem apontamento</span>
+        <span><i style="background:#BFE0CD"></i>até 5 h</span>
+        <span><i style="background:#5FAE85"></i>5 a 10 h</span>
+        <span><i style="background:#046B46"></i>10 a 13 h</span>
+        <span><i style="background:#C00000"></i>acima de 13 h</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EQUIPAMENTOS ============ -->
+<section data-pag="equip" class="pag oculto">
+  <div class="kpis" id="kEquip"></div>
+  <div class="grade">
+    <div class="card"><h2>Top 10 equipamentos por horas de mão de obra</h2><div class="graf" style="height:330px"><canvas id="gTopEquip" role="img" aria-label="Top 10 equipamentos"></canvas></div></div>
+    <div class="card">
+      <h2>Visão por família</h2>
+      <label class="rot" for="fFamilia" style="font-size:12px;color:#595959">Família</label>
+      <select id="fFamilia" style="margin:4px 0 8px;padding:5px;border:1px solid #A9CDB9;border-radius:4px"></select>
+      <div class="kpis" id="kFamilia" style="margin-bottom:8px"></div>
+      <div class="graf" style="height:240px"><canvas id="gFamEquip" role="img" aria-label="Equipamentos da família"></canvas></div>
+      <div class="rodape">São horas de mão de obra, não horas paradas.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ORDENS ============ -->
+<section data-pag="ordens" class="pag oculto">
+  <div class="kpis" id="kOrdens"></div>
+  <div class="grade">
+    <div class="card"><h2>Ordens por faixa de horas</h2><div class="graf"><canvas id="gFaixa" role="img" aria-label="Ordens por faixa de horas"></canvas></div></div>
+    <div class="card"><h2>Ordens por nº de pessoas apontando</h2><div class="graf"><canvas id="gPessoasOrdem" role="img" aria-label="Pessoas por ordem"></canvas></div></div>
+  </div>
+  <div class="card"><h2>Maiores ordens em horas</h2><div class="tabela"><table id="tOrdens"></table></div><div class="rodape">Filtro de área não se aplica às ordens (uma ordem pode ter pessoas de várias áreas).</div></div>
+</section>
+
+<!-- ============ QUALIDADE ============ -->
+<section data-pag="qualidade" class="pag oculto">
+  <div class="kpis" id="kQualidade"></div>
+  <div class="grade">
+    <div class="card"><h2 id="tSemEq">Horas sem equipamento por mês</h2><div class="graf"><canvas id="gSemEqMes" role="img" aria-label="Horas sem equipamento por mês"></canvas></div></div>
+    <div class="card"><h2>% das horas sem equipamento, por área</h2><div class="graf"><canvas id="gSemEqArea" role="img" aria-label="Percentual sem equipamento por área"></canvas></div></div>
+  </div>
+  <div class="grade">
+    <div class="card"><h2>Dias entre execução e lançamento no SAP</h2><div class="graf"><canvas id="gAtraso" role="img" aria-label="Atraso de lançamento"></canvas></div></div>
+    <div class="destaques">
+      <h2>Ações por indicador</h2>
+      <div>• <b>Sem equipamento:</b> TAG obrigatória na ordem; abrir OS por equipamento (Lubrificação).</div>
+      <div>• <b>Atraso:</b> lançar no mesmo turno; meta de até 2 dias.</div>
+      <div>• <b>Texto genérico:</b> registrar o que foi feito e a causa.</div>
+      <div>• <b>Acima de 12 h:</b> supervisor valida antes do lançamento.</div>
+      <div>• <b>Linhas duplicadas:</b> conferir a exportação da IW47.</div>
+      <div>• <b>Sem cadastro:</b> completar Área, Letra e Turno na aba Base.</div>
+    </div>
+  </div>
+</section>
+</main>
+</div>
+<footer></footer>
+</div>
+
+<script>
+(() => {
+const C = window.CONFIG;
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const VERDE='#046B46', VERDE2='#00905C', SUAVE='#8CC9A8', VERM='#C00000', LARANJA='#E07B00', CINZA='#9DB8A8';
+const fmt0 = v => (v ?? 0).toLocaleString('pt-BR',{maximumFractionDigits:0});
+const fmt1 = v => (v ?? 0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const pct = (v,d=0) => v==null||!isFinite(v) ? '–' : (v*100).toLocaleString('pt-BR',{maximumFractionDigits:d,minimumFractionDigits:d})+'%';
+const $ = s => document.querySelector(s);
+const demo = new URLSearchParams(location.search).has('demo');
+let sb = null, D = {}, graficos = {}, pagina = 'geral', modoRank = 'piores';
+
+if (window.Chart) {
+  Chart.defaults.font.family = "'Barlow', sans-serif";
+  Chart.defaults.color = '#595959';
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+}
+
+/* ---------- acesso a dados ---------- */
+async function lerView(nome, filtros = {}) {
+  if (demo) {
+    let r = D.__demo[nome] || [];
+    for (const [k,v] of Object.entries(filtros.gte||{})) r = r.filter(x => x[k] >= v);
+    for (const [k,v] of Object.entries(filtros.lte||{})) r = r.filter(x => x[k] <= v);
+    for (const [k,v] of Object.entries(filtros.eq||{})) r = r.filter(x => x[k] == v);
+    return r;
+  }
+  const todos = []; const passo = 1000;
+  for (let a = 0; ; a += passo) {
+    let q = sb.from(nome).select(filtros.select || '*').range(a, a + passo - 1);
+    for (const [k,v] of Object.entries(filtros.gte||{})) q = q.gte(k, v);
+    for (const [k,v] of Object.entries(filtros.lte||{})) q = q.lte(k, v);
+    for (const [k,v] of Object.entries(filtros.eq||{})) q = q.eq(k, v);
+    const { data, error } = await q;
+    if (error) throw error;
+    todos.push(...data);
+    if (data.length < passo) break;
+  }
+  return todos;
+}
+
+async function carregar() {
+  $('#carregando').classList.remove('oculto');
+  if (demo && !D.__demo) D.__demo = await (await fetch('demo.json')).json();
+  const [mesArea, mesTot, pessoaMes, famMes, atraso, ult] = await Promise.all([
+    lerView('v_ap_mes_area'), lerView('v_ap_mes_totais'), lerView('v_ap_pessoa_mes'),
+    lerView('v_ap_familia_mes'), lerView('v_ap_atraso_faixa'), lerView('v_ap_ultima_sync')
+  ]);
+  const num = r => { for (const k in r) if (typeof r[k] === 'string' && /^-?\d+(\.\d+)?$/.test(r[k]) && !['matricula','ordem','equipamento'].includes(k)) r[k] = +r[k]; return r; };
+  D.mesArea = mesArea.map(num); D.mesTot = mesTot.map(num); D.pessoaMes = pessoaMes.map(num);
+  D.famMes = famMes.map(num); D.atraso = atraso.map(num);
+  const u = ult[0] || {};
+  D.dadosAte = u.dados_ate || null;
+  $('#ultimaSync').textContent = u.dados_ate
+    ? `dados até ${new Date(u.dados_ate+'T00:00').toLocaleDateString('pt-BR')} · atualizado em ${new Date(u.atualizado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}`
+    : 'sem dados ainda';
+  montarFiltros();
+  await atualizar();
+}
+
+/* ---------- filtros ---------- */
+function montarFiltros() {
+  const anos = [...new Set(D.mesArea.map(r => r.mes.slice(0,4)))].sort();
+  const areas = [...new Set(D.mesArea.map(r => r.area))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const fA = $('#fAno'), fM = $('#fMes'), fR = $('#fArea');
+  const anoSel = fA.value || anos[anos.length-1];
+  fA.innerHTML = anos.map(a => `<option ${a===anoSel?'selected':''}>${a}</option>`).join('');
+  if (!fM.options.length) fM.innerHTML = '<option value="">Todos</option>' + MESES.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+  const areaSel = fR.value;
+  fR.innerHTML = '<option value="">Todas</option>' + areas.map(a => `<option ${a===areaSel?'selected':''}>${a}</option>`).join('');
+  $('#refTxt').textContent = pct(C.REFERENCIA);
+}
+function periodo() {
+  const ano = $('#fAno').value, mes = $('#fMes').value;
+  const ini = mes ? `${ano}-${mes}-01` : `${ano}-01-01`;
+  const fim = mes ? `${ano}-${mes}-01` : `${ano}-12-01`;
+  return { ano, mes, ini, fim, area: $('#fArea').value };
+}
+const noPeriodo = (r, p) => r.mes >= p.ini && r.mes <= p.fim && (!p.area || r.area === p.area);
+const soma = (arr, k) => arr.reduce((s, r) => s + (+r[k] || 0), 0);
+
+/* ---------- gráficos ---------- */
+function grafico(id, cfg) {
+  if (graficos[id]) graficos[id].destroy();
+  cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: false }, cfg.options || {});
+  graficos[id] = new Chart(document.getElementById(id), cfg);
+}
+const rotulos = (fmt) => ({
+  id: 'rotulos',
+  afterDatasetsDraw(ch) {
+    const { ctx } = ch; ctx.save(); ctx.font = "600 11px Barlow"; ctx.fillStyle = '#262626';
+    const horiz = ch.options.indexAxis === 'y';
+    ch.data.datasets.forEach((ds, i) => {
+      if (ds.semRotulo) return;
+      const meta = ch.getDatasetMeta(i); if (meta.hidden) return;
+      meta.data.forEach((el, j) => {
+        const v = ds.data[j]; if (!v) return;
+        const ultimo = ch.data.datasets.slice(i+1).every(d => d.stack !== ds.stack || !d.data[j] || d.semRotulo);
+        if (ds.stack && !ultimo) return;
+        const total = ds.stack ? ch.data.datasets.filter(d => d.stack === ds.stack && !d.semRotulo).reduce((s,d)=>s+(d.data[j]||0),0) : v;
+        const txt = fmt(total);
+        if (horiz) { ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(txt, el.x + 4, el.y); }
+        else { ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(txt, el.x, el.y - 3); }
+      });
+    });
+    ctx.restore();
+  }
+});
+const linhaRef = (valor) => ({
+  id: 'linhaRef',
+  afterDatasetsDraw(ch) {
+    const x = ch.scales.x.getPixelForValue(valor), { top, bottom } = ch.chartArea, ctx = ch.ctx;
+    ctx.save(); ctx.strokeStyle = '#262626'; ctx.setLineDash([5,4]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke(); ctx.restore();
+  }
+});
+const eixos = (horiz, fmtEixo) => ({
+  x: { grid: { display: !horiz ? false : true, color: '#EEF3F0' }, ticks: horiz && fmtEixo ? { callback: fmtEixo } : {}, stacked: true, beginAtZero: true },
+  y: { grid: { display: horiz ? false : true, color: '#EEF3F0' }, ticks: !horiz && fmtEixo ? { callback: fmtEixo } : {}, stacked: true, beginAtZero: true }
+});
+
+/* ---------- KPI ---------- */
+const kpi = (rot, val, det, cls='') => `<div class="kpi ${cls}"><div class="r">${rot}</div><div class="v">${val}</div><div class="d">${det||''}</div></div>`;
+
+/* ---------- apropriação por pessoa no período ---------- */
+function pessoasPeriodo(p) {
+  const m = new Map();
+  D.pessoaMes.filter(r => noPeriodo(r, p)).forEach(r => {
+    const o = m.get(r.matricula) || { matricula: r.matricula, nome: r.nome, area: r.area, letra: r.letra, situacao: r.situacao, horas: 0, previstas: 0, dias: 0, dias12: 0 };
+    o.horas += +r.horas || 0; o.previstas += +r.previstas || 0; o.dias += +r.dias_apontados || 0; o.dias12 += +r.dias_acima_12h || 0;
+    m.set(r.matricula, o);
+  });
+  return [...m.values()];
+}
+
+/* ---------- páginas ---------- */
+async function atualizar() {
+  const p = periodo();
+  const ma = D.mesArea.filter(r => noPeriodo(r, p));
+  const H = soma(ma, 'horas');
+  const pes = pessoasPeriodo(p);
+  const comEscala = pes.filter(x => x.previstas > 0 && x.horas > 0);
+  const aprop = soma(comEscala, 'horas') / soma(comEscala, 'previstas');
+
+  // ordens e equipamentos do ano
+  const [ordens, equip] = await Promise.all([
+    lerView('v_ap_ordem', { gte: { mes: p.ini }, lte: { mes: p.fim } }),
+    lerView('v_ap_equip_mes', { gte: { mes: p.ini }, lte: { mes: p.fim } })
+  ]);
+  ordens.forEach(o => { o.horas = +o.horas; o.pessoas = +o.pessoas; });
+  const eq = equip.filter(r => !p.area || r.area === p.area).map(r => ({ ...r, horas: +r.horas, horas_pm01: +r.horas_pm01 || 0, ordens: +r.ordens }));
+
+  // ---------- Visão geral ----------
+  const semEq = soma(ma, 'horas_sem_equip'), pm01 = soma(ma, 'horas_pm01');
+  const nAp = soma(ma, 'apontamentos'), atrSoma = soma(ma, 'atraso_soma'), at7 = soma(ma, 'apont_atraso_7d');
+  const nEquip = new Set(eq.map(r => r.equipamento)).size;
+  const nPes = pes.filter(x => x.horas > 0).length;
+  $('#kGeral').innerHTML =
+    kpi('Horas apontadas', fmt0(H), `${nPes} pessoas · ${fmt0(new Set(ordens.map(o=>o.ordem)).size)} ordens`) +
+    kpi('Apropriação x escala', pct(aprop), `referência ${pct(C.REFERENCIA)}`, aprop < C.REFERENCIA ? 'ruim' : '') +
+    kpi('Corretiva (PM01)', pct(pm01 / H, 1), 'das horas apontadas') +
+    kpi('Horas sem equipamento', pct(semEq / H, 1), `${fmt0(semEq)} h sem destino`, semEq / H > 0.1 ? 'ruim' : '') +
+    kpi('Atraso de lançamento', fmt1(atrSoma / nAp) + ' dias', `${pct(at7 / nAp)} após 7 dias`, 'atencao') +
+    kpi('Equipamentos atendidos', fmt0(nEquip), 'com horas apontadas');
+
+  const anoAnt = String(+p.ano - 1);
+  const serie = ano => MESES.map((_, i) => { const mm = `${ano}-${String(i+1).padStart(2,'0')}-01`; const v = soma(D.mesArea.filter(r => r.mes === mm && (!p.area || r.area === p.area)), 'horas'); return v || null; });
+  $('#tMensal').textContent = `Horas apontadas por mês · ${p.ano} x ${anoAnt}`;
+  grafico('gMensal', { type: 'line', data: { labels: MESES, datasets: [
+    { label: p.ano, data: serie(p.ano), borderColor: VERDE, backgroundColor: VERDE, borderWidth: 2.5, pointRadius: 3 },
+    { label: anoAnt, data: serie(anoAnt), borderColor: CINZA, backgroundColor: CINZA, borderWidth: 2, pointRadius: 0 } ] },
+    options: { plugins: { legend: { position: 'top', align: 'end' }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt0(c.raw)} h` } } },
+      scales: { y: { beginAtZero: true, grid: { color: '#EEF3F0' }, ticks: { callback: v => fmt0(v) } }, x: { grid: { display: false } } } } });
+
+  const porArea = {};
+  comEscala.forEach(x => { const a = porArea[x.area] || (porArea[x.area] = { h: 0, p: 0 }); a.h += x.horas; a.p += x.previstas; });
+  const areas = Object.entries(porArea).map(([a, v]) => [a, v.h / v.p]).sort((a, b) => b[1] - a[1]);
+  grafico('gArea', { type: 'bar', data: { labels: areas.map(a => a[0]), datasets: [{ data: areas.map(a => +(a[1]*100).toFixed(1)),
+      backgroundColor: areas.map(a => a[1] >= 0.4 ? VERDE2 : a[1] >= 0.2 ? LARANJA : VERM), borderRadius: 3 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw + '%' } } },
+      scales: { x: { min: 0, max: 100, grid: { color: '#EEF3F0' }, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } } },
+    plugins: [rotulos(v => v.toLocaleString('pt-BR') + '%'), linhaRef(C.REFERENCIA * 100)] });
+
+  const fam = {};
+  D.famMes.filter(r => noPeriodo(r, p)).forEach(r => { const f = fam[r.familia] || (fam[r.familia] = { h: 0, c: 0 }); f.h += +r.horas; f.c += +r.horas_pm01 || 0; });
+  const fl = Object.entries(fam).sort((a, b) => b[1].h - a[1].h);
+  grafico('gFamilia', { type: 'bar', data: { labels: fl.map(f => f[0]), datasets: [
+    { label: 'Corretiva PM01', data: fl.map(f => Math.round(f[1].c)), backgroundColor: VERDE, stack: 's' },
+    { label: 'Preventiva / outras', data: fl.map(f => Math.round(f[1].h - f[1].c)), backgroundColor: SUAVE, stack: 's' } ] },
+    options: { indexAxis: 'y', plugins: { legend: { position: 'top', align: 'end' } }, scales: eixos(true, v => fmt0(v)) },
+    plugins: [rotulos(fmt0)] });
+
+  let mensal = serie(p.ano).map((v, i) => [v, i]).filter(x => x[0] != null);
+  // ignora o último mês se ainda está em andamento (dados até antes do dia 25)
+  if (D.dadosAte && mensal.length > 1) { const ult = mensal[mensal.length - 1][1]; if (D.dadosAte.slice(0, 4) === p.ano && +D.dadosAte.slice(5, 7) - 1 === ult && +D.dadosAte.slice(8, 10) < 25) mensal = mensal.slice(0, -1); }
+  const escRet = fl.filter(f => ['Escavadeira','Caminhão basculante'].includes(f[0])).reduce((s, f) => s + f[1].h, 0);
+  $('#destaques').innerHTML = `<h2>Destaques do período</h2>
+    <div>• Apropriação de <b>${pct(aprop)}</b> contra a referência de ${pct(C.REFERENCIA)}.</div>
+    ${mensal.length > 1 && !p.mes ? `<div>• Horas mensais: <b>${fmt0(mensal[0][0])} h</b> em ${MESES[mensal[0][1]]} e <b>${fmt0(mensal[mensal.length-1][0])} h</b> em ${MESES[mensal[mensal.length-1][1]]} (último mês fechado).</div>` : ''}
+    <div>• <b>${pct(semEq / H, 1)}</b> das horas sem equipamento: não entram no custo de nenhum ativo.</div>
+    <div>• Escavadeiras e basculantes concentram <b>${pct(escRet / H)}</b> das horas.</div>`;
+
+  // ---------- Pessoas ----------
+  const abaixo50 = comEscala.filter(x => x.horas / x.previstas < 0.5).length;
+  const naRef = comEscala.filter(x => x.horas / x.previstas >= C.REFERENCIA).length;
+  const semApont = pes.filter(x => x.previstas > 0 && x.horas <= 0).length;
+  $('#kPessoas').innerHTML =
+    kpi('Técnicos com escala', comEscala.length, 'que apontaram no período') +
+    kpi('Abaixo de 50%', abaixo50, pct(abaixo50 / comEscala.length) + ' dos técnicos', 'ruim') +
+    kpi(`Na referência (${pct(C.REFERENCIA)})`, naRef, 'ou acima') +
+    kpi('Déficit de horas', fmt0(soma(comEscala, 'previstas') - soma(comEscala, 'horas')) + ' h', 'previstas e não apontadas', 'atencao') +
+    kpi('Com escala e sem apontar', semApont, 'férias, afastamento ou não apontou', 'atencao');
+  const ord = [...comEscala].map(x => ({ ...x, a: x.horas / x.previstas })).sort((a, b) => modoRank === 'piores' ? a.a - b.a : b.a - a.a).slice(0, 15);
+  $('#tRanking').innerHTML = `<thead><tr><th>#</th><th>Técnico</th><th>Área</th><th>Letra</th><th class="n">Apontado</th><th class="n">Escala</th><th>% apropriação</th></tr></thead><tbody>` +
+    ord.map((x, i) => `<tr><td><b>${i + 1}</b></td><td>${x.nome || x.matricula}</td><td>${x.area}</td><td>${x.letra}</td><td class="n">${fmt0(x.horas)} h</td><td class="n">${fmt0(x.previstas)} h</td>
+      <td><div style="display:flex;gap:6px;align-items:center"><div class="barra ${modoRank==='melhores'?'boa':''}" style="flex:1"><div style="width:${Math.min(100, x.a * 100)}%"></div></div><b style="width:44px;text-align:right">${pct(x.a)}</b></div></td></tr>`).join('') + '</tbody>';
+
+  // mapa de calor: mês selecionado ou último mês com dados no ano
+  const mesesAno = [...new Set(ma.map(r => r.mes))].sort();
+  const mesHeat = p.mes ? p.ini : mesesAno[mesesAno.length - 1];
+  if (mesHeat) {
+    const dias = await lerView('v_ap_pessoa_dia', { eq: { mes: mesHeat } });
+    const nDias = new Date(+mesHeat.slice(0, 4), +mesHeat.slice(5, 7), 0).getDate();
+    const porPes = {}; dias.forEach(d => { (porPes[d.matricula] ||= {})[+d.data.slice(8, 10)] = +d.horas; });
+    $('#tHeat').textContent = `Mapa de apontamento diário · ${MESES[+mesHeat.slice(5, 7) - 1]}/${mesHeat.slice(0, 4)}`;
+    const cor = v => !v ? '#EDEDED' : v <= 5 ? '#BFE0CD' : v <= 10 ? '#5FAE85' : v <= 13 ? '#046B46' : '#C00000';
+    const cab = `<span></span>` + Array.from({ length: nDias }, (_, i) => `<span style="text-align:center;color:#7A7A7A">${(i + 1) % 5 === 0 || i === 0 ? i + 1 : ''}</span>`).join('');
+    const linhas = ord.slice(0, 12).map(x => `<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(x.nome || x.matricula)}</span>` +
+      Array.from({ length: nDias }, (_, i) => { const v = (porPes[x.matricula] || {})[i + 1] || 0; return `<div class="c" style="background:${cor(v)}" title="${i + 1}: ${fmt1(v)} h"></div>`; }).join('')).join('');
+    $('#heat').innerHTML = `<div class="heat" style="grid-template-columns:150px repeat(${nDias},minmax(0,1fr))">${cab}${linhas}</div>`;
+  }
+
+  // ---------- Equipamentos ----------
+  const porEq = {};
+  eq.forEach(r => { const e = porEq[r.equipamento] || (porEq[r.equipamento] = { eq: r.equipamento, fam: r.familia, h: 0, c: 0, o: 0 }); e.h += r.horas; e.c += r.horas_pm01; e.o += r.ordens; });
+  const lEq = Object.values(porEq).sort((a, b) => b.h - a.h);
+  const hEq = lEq.reduce((s, e) => s + e.h, 0), top10 = lEq.slice(0, 10);
+  const famSel = $('#fFamilia');
+  const famLista = [...new Set(lEq.map(e => e.fam))].sort();
+  const fsel = famSel.value || (famLista.includes('Empilhadeira') ? 'Empilhadeira' : famLista[0]);
+  famSel.innerHTML = famLista.map(f => `<option ${f === fsel ? 'selected' : ''}>${f}</option>`).join('');
+  const lFam = lEq.filter(e => e.fam === fsel);
+  const hFam = lFam.reduce((s, e) => s + e.h, 0), cFam = lFam.reduce((s, e) => s + e.c, 0);
+  const osFam = new Set(ordens.filter(o => o.familia === fsel && o.tipo_ordem === 'PM01').map(o => o.ordem)).size;
+  const famMaisCorr = Object.values(lEq.reduce((m, e) => { const f = m[e.fam] || (m[e.fam] = { f: e.fam, h: 0, c: 0 }); f.h += e.h; f.c += e.c; return m; }, {})).filter(f => f.h > 500 && !/outros/i.test(f.f)).sort((a, b) => b.c / b.h - a.c / a.h)[0];
+  $('#kEquip').innerHTML =
+    kpi('Horas com equipamento', fmt0(hEq) + ' h', `em ${lEq.length} equipamentos`) +
+    kpi('Top 10 equipamentos', pct(top10.reduce((s, e) => s + e.h, 0) / hEq), 'das horas com equipamento', 'atencao') +
+    (famMaisCorr ? kpi(`Corretiva em ${famMaisCorr.f.toLowerCase()}`, pct(famMaisCorr.c / famMaisCorr.h), `${fmt0(famMaisCorr.c)} de ${fmt0(famMaisCorr.h)} h`, 'ruim') : '');
+  $('#kFamilia').innerHTML = kpi('Horas', fmt0(hFam) + ' h', `${lFam.length} equipamentos`) + kpi('% corretiva', pct(cFam / hFam), '', cFam / hFam > 0.8 ? 'ruim' : '') + kpi('Ordens PM01', osFam, 'no período');
+  const barrasEq = (id, lista) => grafico(id, { type: 'bar', data: { labels: lista.map(e => e.eq), datasets: [
+    { label: 'Corretiva', data: lista.map(e => Math.round(e.c)), backgroundColor: VERDE, stack: 's' },
+    { label: 'Preventiva / outras', data: lista.map(e => Math.round(e.h - e.c)), backgroundColor: SUAVE, stack: 's' } ] },
+    options: { indexAxis: 'y', plugins: { legend: { position: 'top', align: 'end' } }, scales: eixos(true, v => fmt0(v)) }, plugins: [rotulos(v => fmt0(v) + ' h')] });
+  barrasEq('gTopEquip', top10);
+  barrasEq('gFamEquip', lFam.slice(0, 8));
+
+  // ---------- Ordens ----------
+  const faixas = [['até 2 h', 0, 2], ['2 a 5 h', 2, 5], ['5 a 10 h', 5, 10], ['10 a 20 h', 10, 20], ['20 a 50 h', 20, 50], ['acima de 50 h', 50, 1e9]];
+  const cont = faixas.map(f => ordens.filter(o => o.horas > f[1] - (f[1] === 0 ? 1e9 : 0) && o.horas <= f[2]).length);
+  const nO = ordens.length, hO = ordens.reduce((s, o) => s + o.horas, 0);
+  $('#kOrdens').innerHTML =
+    kpi('Ordens com apontamento', fmt0(nO), 'no período') +
+    kpi('Horas por ordem', fmt1(hO / nO) + ' h', 'média') +
+    kpi('Pessoas por ordem', fmt1(ordens.reduce((s, o) => s + o.pessoas, 0) / nO), 'média') +
+    kpi('Ordens acima de 50 h', fmt0(cont[5]), pct(cont[5] / nO) + ' das ordens', 'atencao');
+  grafico('gFaixa', { type: 'bar', data: { labels: faixas.map(f => f[0]), datasets: [{ data: cont, backgroundColor: [VERDE2, VERDE2, VERDE2, VERDE2, LARANJA, VERM], borderRadius: 3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#EEF3F0' } }, x: { grid: { display: false } } } }, plugins: [rotulos(fmt0)] });
+  const pc = [1, 2, 3, 4].map(n => ordens.filter(o => o.pessoas === n).length).concat(ordens.filter(o => o.pessoas >= 5).length);
+  grafico('gPessoasOrdem', { type: 'bar', data: { labels: ['1 pessoa', '2 pessoas', '3 pessoas', '4 pessoas', '5 ou mais'], datasets: [{ data: pc, backgroundColor: VERDE2, borderRadius: 3 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#EEF3F0' } }, y: { grid: { display: false } } } }, plugins: [rotulos(fmt0)] });
+  const topO = [...ordens].sort((a, b) => b.horas - a.horas).slice(0, 10);
+  $('#tOrdens').innerHTML = `<thead><tr><th>Ordem</th><th>Tipo</th><th>Equipamento</th><th>Família</th><th class="n">Horas</th><th class="n">Pessoas</th></tr></thead><tbody>` +
+    topO.map(o => `<tr><td>${o.ordem}</td><td>${o.tipo_ordem || ''}</td><td>${o.equipamento ? o.equipamento : '<b style="color:#A30000">sem equipamento</b>'}</td><td>${o.familia || ''}</td><td class="n"><b>${fmt0(o.horas)} h</b></td><td class="n">${o.pessoas}</td></tr>`).join('') + '</tbody>';
+
+  // ---------- Qualidade ----------
+  const gen = soma(ma, 'apont_texto_generico'), a12 = soma(ma, 'apont_acima_12h');
+  const semCad = soma(ma, 'horas_sem_cadastro'), dup = soma(ma, 'horas_duplicadas');
+  $('#kQualidade').innerHTML =
+    kpi('Sem equipamento', pct(semEq / H, 1), fmt0(semEq) + ' h', 'ruim') +
+    kpi('Atraso de lançamento', fmt1(atrSoma / nAp) + ' dias', pct(at7 / nAp) + ' após 7 dias', 'atencao') +
+    kpi('Texto genérico', pct(gen / nAp), '"OM confirmada" e similares', 'atencao') +
+    kpi('Acima de 12 h', fmt0(a12), 'apontamentos a revisar', 'atencao') +
+    kpi('Linhas duplicadas', fmt0(dup) + ' h', 'idênticas na IW47', dup > 0 ? 'ruim' : '') +
+    kpi('Cadastro incompleto', fmt0(semCad) + ' h', 'área "A definir" ou fora da Base', 'atencao');
+  const semEqMes = MESES.map((_, i) => { const mm = `${p.ano}-${String(i + 1).padStart(2, '0')}-01`; return soma(D.mesArea.filter(r => r.mes === mm && (!p.area || r.area === p.area)), 'horas_sem_equip') || null; });
+  $('#tSemEq').textContent = `Horas sem equipamento por mês · ${p.ano}`;
+  grafico('gSemEqMes', { type: 'bar', data: { labels: MESES, datasets: [{ data: semEqMes.map(v => v && Math.round(v)), backgroundColor: '#E06666', borderRadius: 3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#EEF3F0' }, ticks: { callback: v => fmt0(v) } }, x: { grid: { display: false } } } }, plugins: [rotulos(fmt0)] });
+  const sa = {};
+  D.mesArea.filter(r => r.mes >= p.ini && r.mes <= p.fim).forEach(r => { const a = sa[r.area] || (sa[r.area] = { h: 0, s: 0 }); a.h += +r.horas; a.s += +r.horas_sem_equip || 0; });
+  const sl = Object.entries(sa).filter(([, v]) => v.h > 0).map(([a, v]) => [a, v.s / v.h]).sort((a, b) => b[1] - a[1]);
+  grafico('gSemEqArea', { type: 'bar', data: { labels: sl.map(s => s[0]), datasets: [{ data: sl.map(s => +(s[1] * 100).toFixed(1)),
+      backgroundColor: sl.map(s => s[1] > 0.4 ? VERM : s[1] > 0.1 ? LARANJA : VERDE2), borderRadius: 3 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100, grid: { color: '#EEF3F0' }, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } } },
+    plugins: [rotulos(v => v.toLocaleString('pt-BR') + '%')] });
+  const fx = ['0-1', '2-3', '4-7', '8-15', '16-30', '>30'];
+  const af = fx.map(f => soma(D.atraso.filter(r => noPeriodo(r, p) && r.faixa === f), 'apontamentos'));
+  grafico('gAtraso', { type: 'bar', data: { labels: ['0 a 1 dia', '2 a 3', '4 a 7', '8 a 15', '16 a 30', 'mais de 30'], datasets: [{ data: af, backgroundColor: [VERDE2, VERDE2, SUAVE, LARANJA, '#E06666', VERM], borderRadius: 3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#EEF3F0' }, ticks: { callback: v => fmt0(v) } }, x: { grid: { display: false } } } }, plugins: [rotulos(fmt0)] });
+
+  $('#carregando').classList.add('oculto');
+  mostrar(pagina);
+}
+
+/* ---------- navegação ---------- */
+const TITULOS = { geral: 'APROPRIAÇÃO DE HORAS · VISÃO GERAL', pessoas: 'APROPRIAÇÃO POR PESSOA', equip: 'ESFORÇO POR EQUIPAMENTO', ordens: 'ORDENS DE MANUTENÇÃO', qualidade: 'QUALIDADE DO APONTAMENTO' };
+function mostrar(pg) {
+  pagina = pg;
+  document.querySelectorAll('section.pag').forEach(s => s.classList.toggle('oculto', s.dataset.pag !== pg));
+  document.querySelectorAll('nav.abas button').forEach(b => b.setAttribute('aria-selected', b.dataset.pag === pg));
+  $('#tituloPagina').textContent = TITULOS[pg];
+  Object.values(graficos).forEach(g => g.resize());
+}
+document.querySelectorAll('nav.abas button').forEach(b => b.addEventListener('click', () => mostrar(b.dataset.pag)));
+['#fAno', '#fMes', '#fArea', '#fFamilia'].forEach(s => $(s).addEventListener('change', () => atualizar().catch(erro)));
+$('#bPiores').addEventListener('click', () => { modoRank = 'piores'; $('#bPiores').setAttribute('aria-pressed', 'true'); $('#bMelhores').setAttribute('aria-pressed', 'false'); atualizar().catch(erro); });
+$('#bMelhores').addEventListener('click', () => { modoRank = 'melhores'; $('#bMelhores').setAttribute('aria-pressed', 'true'); $('#bPiores').setAttribute('aria-pressed', 'false'); atualizar().catch(erro); });
+
+function erro(e) { console.error(e); $('#carregando').classList.remove('oculto'); $('#carregando').textContent = 'Erro ao carregar: ' + (e.message || e); }
+
+/* ---------- login ---------- */
+async function iniciar() {
+  if (demo) { $('#app').classList.remove('oculto'); $('#sair').classList.add('oculto'); return carregar().catch(erro); }
+  if (!C.SUPABASE_URL || !C.SUPABASE_ANON_KEY) { document.body.innerHTML = '<p style="padding:40px;font-family:Barlow">Configure SUPABASE_URL e SUPABASE_ANON_KEY no arquivo config.js.</p>'; return; }
+  sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
+  const { data } = await sb.auth.getSession();
+  if (data.session) { $('#app').classList.remove('oculto'); carregar().catch(erro); }
+  else $('#login').classList.remove('oculto');
+}
+$('#entrar').addEventListener('click', async () => {
+  $('#erroLogin').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#senha').value });
+  if (error) { $('#erroLogin').textContent = 'E-mail ou senha inválidos.'; return; }
+  $('#login').classList.add('oculto'); $('#app').classList.remove('oculto'); carregar().catch(erro);
+});
+$('#senha').addEventListener('keydown', e => { if (e.key === 'Enter') $('#entrar').click(); });
+$('#sair').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+iniciar();
+})();
+</script>
+</body>
+</html>
